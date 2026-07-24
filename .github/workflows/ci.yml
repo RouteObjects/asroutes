@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: asroutes-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    name: macOS
+    runs-on: macos-15
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Toolchain versions
+        run: |
+          swift --version
+          xcodebuild -version
+          swift format --version
+
+      - name: Resolve dependencies
+        run: swift package resolve
+
+      - name: Audit tracked release content
+        run: ./scripts/audit-release-content.sh tree
+
+      - name: Strict format lint
+        run: >-
+          swift format lint
+          --configuration .swift-format.json
+          --recursive
+          --strict
+          Package.swift Sources Tests
+
+      - name: Debug build
+        run: swift build --product asroutes-cli
+
+      - name: Test
+        run: ./scripts/test.sh
+
+      - name: Release build
+        run: swift build -c release --product asroutes-cli
+
+      - name: Exercise offline CLI entry points
+        run: |
+          binary="$(swift build -c release --show-bin-path)/asroutes-cli"
+          test "$("${binary}" --version)" = "0.1.0"
+          "${binary}" --help >/dev/null
+
+      - name: Build ASRoutes for the iOS 18 simulator
+        run: |
+          sdk_path="$(xcrun --sdk iphonesimulator --show-sdk-path)"
+          swift build \
+            --target ASRoutes \
+            --triple arm64-apple-ios18.0-simulator \
+            --sdk "${sdk_path}"
+
+  linux:
+    name: Linux ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    # swift:6.1-jammy multi-architecture manifest, resolved 2026-07-24.
+    container: >-
+      swift:6.1-jammy@sha256:12be34a341945adb64914405ed7b568fcb2d35edbd63a3755007e47dce59456e
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Resolve dependencies
+        run: swift package resolve
+
+      - name: Debug build
+        run: swift build --product asroutes-cli
+
+      - name: Test
+        run: ./scripts/test.sh
+
+      - name: Release build
+        run: swift build -c release --product asroutes-cli
+
+      - name: Exercise offline CLI entry points
+        run: |
+          binary="$(swift build -c release --show-bin-path)/asroutes-cli"
+          test "$("${binary}" --version)" = "0.1.0"
+          "${binary}" --help >/dev/null
