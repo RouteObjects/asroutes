@@ -1,0 +1,368 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semantic version to dry-run, without a leading v
+        required: true
+        default: 0.1.0
+        type: string
+  push:
+    tags:
+      - "*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: asroutes-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  metadata:
+    name: Validate release metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Audit tracked release content
+        run: ./scripts/audit-release-content.sh tree
+
+      - name: Validate version and signed release tag
+        id: version
+        env:
+          DISPATCH_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            version="${GITHUB_REF_NAME}"
+          else
+            version="${DISPATCH_VERSION}"
+          fi
+
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            printf 'Invalid release version: %s\n' "${version}" >&2
+            exit 1
+          fi
+
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            tag_object="$(git rev-parse "${GITHUB_REF}^{tag}")" || {
+              printf 'Release tag must be annotated and signed: %s\n' "${version}" >&2
+              exit 1
+            }
+
+            verified="$(
+              gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object}" \
+                --jq '.verification.verified'
+            )"
+            if [[ "${verified}" != "true" ]]; then
+              printf 'GitHub did not verify the signature on tag %s.\n' "${version}" >&2
+              exit 1
+            fi
+
+            git fetch --no-tags origin main
+            tagged_commit="$(git rev-list -n 1 "${GITHUB_REF}")"
+            git merge-base --is-ancestor "${tagged_commit}" origin/main || {
+              printf 'Release tag %s is not reachable from origin/main.\n' "${version}" >&2
+              exit 1
+            }
+          fi
+
+          printf 'version=%s\n' "${version}" >>"${GITHUB_OUTPUT}"
+
+  build-macos:
+    name: macOS ${{ matrix.arch }}
+    needs: metadata
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: aarch64
+            uname_arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+            uname_arch: x86_64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Verify native runner architecture
+        env:
+          EXPECTED_ARCH: ${{ matrix.uname_arch }}
+        run: test "$(uname -m)" = "${EXPECTED_ARCH}"
+
+      - name: Build release binary
+        run: swift build -c release --product asroutes-cli
+
+      - name: Validate binary version and help
+        env:
+          VERSION: ${{ needs.metadata.outputs.version }}
+        run: |
+          binary="$(swift build -c release --show-bin-path)/asroutes-cli"
+          test "$("${binary}" --version)" = "${VERSION}"
+          "${binary}" --help >/dev/null
+          ./scripts/audit-release-content.sh binary "${binary}"
+
+      - name: Package release archive
+        env:
+          VERSION: ${{ needs.metadata.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          asset="asroutes-${VERSION}-darwin-${ARCH}.tar.gz"
+          stage="$(mktemp -d)"
+          install -m 0755 \
+            "$(swift build -c release --show-bin-path)/asroutes-cli" \
+            "${stage}/asroutes"
+          install -m 0644 LICENSE THIRD_PARTY_NOTICES.txt "${stage}/"
+          cp -R ThirdPartyLicenses "${stage}/ThirdPartyLicenses"
+          COPYFILE_DISABLE=1 tar -C "${stage}" -czf "${asset}" \
+            asroutes LICENSE THIRD_PARTY_NOTICES.txt ThirdPartyLicenses
+
+      - name: Upload release archive
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-darwin-${{ matrix.arch }}
+          path: asroutes-${{ needs.metadata.outputs.version }}-darwin-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  build-linux:
+    name: Linux ${{ matrix.arch }}
+    needs: metadata
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+            docker_platform: linux/amd64
+            uname_arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+            docker_platform: linux/arm64
+            uname_arch: aarch64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Verify native runner architecture
+        env:
+          EXPECTED_ARCH: ${{ matrix.uname_arch }}
+        run: test "$(uname -m)" = "${EXPECTED_ARCH}"
+
+      - name: Build with Swift 6.1 on Ubuntu 22.04
+        env:
+          DOCKER_PLATFORM: ${{ matrix.docker_platform }}
+        run: |
+          # swift:6.1-jammy multi-architecture manifest, resolved 2026-07-24.
+          docker run --rm \
+            --platform "${DOCKER_PLATFORM}" \
+            --user "$(id -u):$(id -g)" \
+            --env XDG_CACHE_HOME=/tmp/swift-cache \
+            --env CLANG_MODULE_CACHE_PATH=/workspace/.build/clang-module-cache \
+            --volume "${PWD}:/workspace" \
+            --workdir /workspace \
+            swift:6.1-jammy@sha256:12be34a341945adb64914405ed7b568fcb2d35edbd63a3755007e47dce59456e \
+            bash -c \
+              'mkdir -p "${XDG_CACHE_HOME}" "${CLANG_MODULE_CACHE_PATH}" &&
+               swift --version &&
+               # CHANGE: Remap compile-time roots so diagnostics retained in the ELF do not
+               # expose the GitHub workspace or SwiftPM scratch directory.
+               swift build -c release --static-swift-stdlib --product asroutes-cli \
+                 -Xswiftc -debug-prefix-map \
+                 -Xswiftc /workspace=Source \
+                 -Xcc -ffile-prefix-map=/workspace/.build=SwiftPMBuild'
+
+      - name: Strip and validate release binary
+        env:
+          VERSION: ${{ needs.metadata.outputs.version }}
+        run: |
+          set -euo pipefail
+          binary=".build/release/asroutes-cli"
+          strip --strip-unneeded "${binary}"
+          test "$("${binary}" --version)" = "${VERSION}"
+          "${binary}" --help >/dev/null
+          ./scripts/audit-release-content.sh binary "${binary}"
+
+          readelf -d "${binary}" | tee elf-dynamic-section.txt
+          if grep -E 'NEEDED.*(libswift|libFoundation|libdispatch|libBlocksRuntime)' \
+              elf-dynamic-section.txt; then
+            printf 'Release binary still requires a Swift runtime shared library.\n' >&2
+            exit 1
+          fi
+
+      - name: Package release archive
+        env:
+          VERSION: ${{ needs.metadata.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          asset="asroutes-${VERSION}-linux-${ARCH}.tar.gz"
+          stage="$(mktemp -d)"
+          install -m 0755 .build/release/asroutes-cli "${stage}/asroutes"
+          install -m 0644 LICENSE THIRD_PARTY_NOTICES.txt "${stage}/"
+          cp -R ThirdPartyLicenses "${stage}/ThirdPartyLicenses"
+          tar -C "${stage}" -czf "${asset}" \
+            asroutes LICENSE THIRD_PARTY_NOTICES.txt ThirdPartyLicenses
+
+      - name: Exercise archive without a Swift installation
+        env:
+          VERSION: ${{ needs.metadata.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+          DOCKER_PLATFORM: ${{ matrix.docker_platform }}
+        run: |
+          set -euo pipefail
+          stage="$(mktemp -d)"
+          tar -C "${stage}" -xzf "asroutes-${VERSION}-linux-${ARCH}.tar.gz"
+          # ubuntu:22.04 multi-architecture manifest, resolved 2026-07-24.
+          test "$(docker run --rm \
+            --platform "${DOCKER_PLATFORM}" \
+            --volume "${stage}:/opt/asroutes:ro" \
+            ubuntu:22.04@sha256:0e0a0fc6d18feda9db1590da249ac93e8d5abfea8f4c3c0c849ce512b5ef8982 \
+            /opt/asroutes/asroutes --version)" = "${VERSION}"
+          docker run --rm \
+            --platform "${DOCKER_PLATFORM}" \
+            --volume "${stage}:/opt/asroutes:ro" \
+            ubuntu:22.04@sha256:0e0a0fc6d18feda9db1590da249ac93e8d5abfea8f4c3c0c849ce512b5ef8982 \
+            /opt/asroutes/asroutes --help >/dev/null
+
+      - name: Upload release archive
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-linux-${{ matrix.arch }}
+          path: asroutes-${{ needs.metadata.outputs.version }}-linux-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  assemble:
+    name: Assemble and inspect release
+    needs: [metadata, build-macos, build-linux]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout release audit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Download release archives
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Validate asset set and write checksums
+        env:
+          VERSION: ${{ needs.metadata.outputs.version }}
+        run: |
+          set -euo pipefail
+          expected=(
+            "asroutes-${VERSION}-darwin-aarch64.tar.gz"
+            "asroutes-${VERSION}-darwin-x86_64.tar.gz"
+            "asroutes-${VERSION}-linux-aarch64.tar.gz"
+            "asroutes-${VERSION}-linux-x86_64.tar.gz"
+          )
+
+          test "$(find dist -maxdepth 1 -name 'asroutes-*.tar.gz' -type f | wc -l)" -eq 4
+          for asset in "${expected[@]}"; do
+            test -s "dist/${asset}"
+            tar -tzf "dist/${asset}" >archive-contents.txt
+            grep -qx 'asroutes' archive-contents.txt
+            grep -qx 'LICENSE' archive-contents.txt
+            grep -qx 'THIRD_PARTY_NOTICES.txt' archive-contents.txt
+            grep -q '^ThirdPartyLicenses/[^/].*' archive-contents.txt
+            if grep -Ev \
+                '^(asroutes|LICENSE|THIRD_PARTY_NOTICES\.txt|ThirdPartyLicenses(/.*)?)$' \
+                archive-contents.txt; then
+              printf 'Unexpected file in %s.\n' "${asset}" >&2
+              exit 1
+            fi
+
+            stage="$(mktemp -d)"
+            tar -C "${stage}" -xzf "dist/${asset}"
+            test -x "${stage}/asroutes"
+            ./scripts/audit-release-content.sh binary "${stage}/asroutes"
+          done
+
+          (
+            cd dist
+            sha256sum "${expected[@]}" >SHA256SUMS
+            sha256sum --check SHA256SUMS
+          )
+
+      - name: Upload assembled release
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: asroutes-${{ needs.metadata.outputs.version }}-release
+          path: |
+            dist/asroutes-*.tar.gz
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
+
+  draft-release:
+    name: Create draft GitHub release
+    if: github.event_name == 'push'
+    needs: [metadata, assemble]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download assembled release
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: asroutes-${{ needs.metadata.outputs.version }}-release
+          path: dist
+
+      - name: Create or update draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.metadata.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "${VERSION}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            is_draft="$(
+              gh release view "${VERSION}" \
+                --repo "${GITHUB_REPOSITORY}" \
+                --json isDraft \
+                --jq '.isDraft'
+            )"
+            if [[ "${is_draft}" != "true" ]]; then
+              printf 'Refusing to replace assets on published release %s.\n' "${VERSION}" >&2
+              exit 1
+            fi
+            gh release upload "${VERSION}" dist/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber
+            gh release edit "${VERSION}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --draft \
+              --title "asroutes ${VERSION}"
+          else
+            gh release create "${VERSION}" dist/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --draft \
+              --verify-tag \
+              --generate-notes \
+              --title "asroutes ${VERSION}"
+          fi

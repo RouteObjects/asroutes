@@ -1,0 +1,7 @@
+# Swift Package Index manifest.
+# Generate hosted DocC documentation for the reusable library only.
+version: 1
+builder:
+  configs:
+    - documentation_targets:
+        - ASRoutes
