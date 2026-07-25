@@ -11,15 +11,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-import ASRoutes
+import ASRoutesClient
 import ArgumentParser
 import CIDR
 import Foundation
 
-struct ASRoutesCommand: AsyncParsableCommand {
+// Package access lets the thin executable invoke Argument Parser directly while this
+// command remains in the regular ASRoutesCLI module used by tests.
+package struct ASRoutesCommand: AsyncParsableCommand {
     static let version = "0.1.0"
 
-    static let configuration = CommandConfiguration(
+    package static let configuration = CommandConfiguration(
         commandName: "asroutes",
         abstract: "List IPv4 or IPv6 IRR route-object prefixes for origin AS numbers.",
         discussion: """
@@ -53,7 +55,9 @@ struct ASRoutesCommand: AsyncParsableCommand {
     @Argument(help: "One or more AS numbers, written as 701 or AS701.")
     var asnOperands: [String] = []
 
-    mutating func run() async throws {
+    package init() {}
+
+    package mutating func run() async throws {
         let asns = try ASNOperandParser.parse(asnOperands)
         let clientConfiguration = try CLIConfigurationBuilder.make(
             host: host,
@@ -68,15 +72,6 @@ struct ASRoutesCommand: AsyncParsableCommand {
             asns: asns,
             addressFamily: addressFamily
         )
-    }
-}
-
-/// The package-visible startup seam used by the thin `asroutes` executable target.
-package enum ASRoutesCLIEntrypoint {
-    package static func main() async {
-        // CHANGE: Process startup lives in its own executable module while the command remains
-        // importable by Xcode and SwiftPM test targets.
-        await ASRoutesCommand.main()
     }
 }
 
@@ -156,7 +151,7 @@ struct ASRoutesApplication: Sendable {
         addressFamily: RouteFamilyOption
     ) async throws {
         let renderedOutput: String
-        // CHANGE: Keep IPv4 and IPv6 lookups strongly typed while sharing the CLI's atomic
+        // Keep IPv4 and IPv6 lookups strongly typed while sharing the CLI's atomic
         // dispatch and output boundary.
         switch addressFamily {
         case .ipv4:
@@ -169,7 +164,7 @@ struct ASRoutesApplication: Sendable {
             )
         }
 
-        // CHANGE: The output sink is invoked only after every query and prefix parse succeeds,
+        // The output sink is invoked only after every query and prefix parse succeeds,
         // making an all-AS snapshot atomic even when a later response fails.
         outputWriter(renderedOutput)
     }
@@ -203,7 +198,7 @@ enum ASNOperandParser {
     private static func parseCanonicalOperand(
         _ operand: String
     ) -> AutonomousSystemNumber? {
-        // CHANGE: Keep the optional CLI prefix local so ASN parsing needs only swift-cidr.
+        // Keep the optional CLI prefix local so ASN parsing needs only swift-cidr.
         let decimal =
             operand.hasPrefix("AS")
             ? String(operand.dropFirst(2))
@@ -276,7 +271,7 @@ enum GroupedRouteRenderer {
         renderGroups(routes, asn: \.asn, prefixes: \.prefixes)
     }
 
-    // CHANGE: Both address families intentionally share identical grouped text formatting.
+    // Both address families intentionally share identical grouped text formatting.
     private static func renderGroups<Route, Prefix>(
         _ routes: [Route],
         asn: (Route) -> AutonomousSystemNumber,

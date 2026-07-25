@@ -43,22 +43,22 @@ swift format lint \
     --recursive \
     --strict \
     Package.swift Sources Tests
-swift build --product asroutes-cli
+swift build --product asroutes
 "${SCRIPT_DIR}/test.sh"
 if [[ "$(uname -s)" == "Linux" ]]; then
     swift build \
         -c release \
         --static-swift-stdlib \
-        --product asroutes-cli \
+        --product asroutes \
         -Xswiftc -debug-prefix-map \
         -Xswiftc "${PACKAGE_ROOT}=Source" \
         -Xcc "-ffile-prefix-map=${PACKAGE_ROOT}/.build=SwiftPMBuild"
 else
-    # CHANGE: Match the GitHub Actions Darwin build so the local release gate audits
+    # Match the GitHub Actions Darwin build so the local release gate audits
     # the same remapped and stripped binary that will be placed in public archives.
     swift build \
         -c release \
-        --product asroutes-cli \
+        --product asroutes \
         -Xswiftc -file-prefix-map \
         -Xswiftc "${PACKAGE_ROOT}/.build=SwiftPMBuild" \
         -Xswiftc -file-prefix-map \
@@ -67,7 +67,7 @@ else
         -Xcc "-ffile-prefix-map=${PACKAGE_ROOT}=Source"
 fi
 
-binary="$(swift build -c release --show-bin-path)/asroutes-cli"
+binary="$(swift build -c release --show-bin-path)/asroutes"
 if [[ "$(uname -s)" == "Linux" ]]; then
     strip --strip-unneeded "${binary}"
 elif [[ "$(uname -s)" == "Darwin" ]]; then
@@ -89,7 +89,7 @@ fi
 if [[ "$(uname -s)" == "Darwin" ]]; then
     sdk_path="$(xcrun --sdk iphonesimulator --show-sdk-path)"
     swift build \
-        --target ASRoutes \
+        --target ASRoutesClient \
         --triple arm64-apple-ios18.0-simulator \
         --sdk "${sdk_path}"
 fi

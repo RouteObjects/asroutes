@@ -15,7 +15,7 @@ import NIOCore
 import NIOEmbedded
 import Testing
 
-@testable import ASRoutes
+@testable import ASRoutesClient
 
 @Suite("IRRd response deadline")
 struct IRRdResponseDeadlineHandlerTests {
@@ -33,7 +33,7 @@ struct IRRdResponseDeadlineHandlerTests {
 
         try await handler.expectResponses(1)
 
-        // CHANGE: Advancing beyond the configured duration before a command write models the
+        // Advancing beyond the configured duration before a command write models the
         // scheduling pause that previously closed a busy Linux ARM64 session before `!n` was sent.
         await eventLoop.advanceTime(by: .seconds(2))
         #expect(channel.isActive)

@@ -15,7 +15,7 @@ import NIOCore
 
 /// One complete response in IRRd's compact, byte-counted query protocol.
 enum IRRdResponse: Sendable, Equatable {
-    // CHANGE: Preserve the exact server-announced length with the decoded payload so downstream
+    // Preserve the exact server-announced length with the decoded payload so downstream
     // protocol handling never has to reconstruct IRRd's terminating-line-feed byte semantics.
     case success(payload: String, announcedByteCount: Int)
     case empty
@@ -115,7 +115,7 @@ struct IRRdFrameDecoder: ByteToMessageDecoder {
                     announced: byteCount
                 )
             }
-            // CHANGE: Charge the advertised bytes at the header boundary, before the decoder
+            // Charge the advertised bytes at the header boundary, before the decoder
             // waits for, materializes, or queues a payload that would exceed the session ceiling.
             try recordSuccessfulResponse(byteCount: byteCount)
 
@@ -165,7 +165,7 @@ struct IRRdFrameDecoder: ByteToMessageDecoder {
         context: ChannelHandlerContext,
         buffer: inout ByteBuffer
     ) throws -> DecodingState {
-        // CHANGE: IRRd includes the payload's final LF in the announced byte count;
+        // IRRd includes the payload's final LF in the announced byte count;
         // the separate `C\n` completion marker immediately follows those bytes.
         guard buffer.readableBytes >= byteCount else {
             return .needMoreData

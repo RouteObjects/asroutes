@@ -13,7 +13,7 @@ snapshot of routes currently visible in the global BGP table.
 - Swift 6.1 or newer
 - macOS 15 or newer, or Ubuntu 22.04 or newer, to run the command-line
   executable
-- iOS 18 or newer when using the `ASRoutes` library in an application
+- iOS 18 or newer when using the `ASRoutesClient` library in an application
 - TCP access to an IRRd raw-Whois service (normally port 43)
 
 The initial release is verified with `swift-cidr` 0.4.0, SwiftNIO 2.100.0, and
@@ -27,8 +27,8 @@ Clone the repository and build a release executable:
 ```sh
 git clone https://github.com/RouteObjects/asroutes.git
 cd asroutes
-swift build -c release --product asroutes-cli
-.build/release/asroutes-cli --version
+swift build -c release --product asroutes
+.build/release/asroutes --version
 ```
 
 Run the test suite with:
@@ -37,11 +37,8 @@ Run the test suite with:
 swift test
 ```
 
-The SwiftPM executable product and its source-built binary are named
-`asroutes-cli`. This distinct name avoids Xcode's case-only build-product
-collision between `asroutes` and the `ASRoutes` library module on
-case-insensitive filesystems. Published release archives, and the Homebrew
-formula when available, install the public command as `asroutes`.
+The SwiftPM executable product, source-built binary, and published command are
+all named `asroutes`.
 
 ## Command-line usage
 
@@ -49,17 +46,17 @@ Pass one or more ASNs in canonical asplain form, either as bare decimal digits
 or with an uppercase `AS` prefix:
 
 ```sh
-swift run asroutes-cli AS701
-swift run asroutes-cli 701 AS3356
+swift run asroutes AS701
+swift run asroutes 701 AS3356
 ```
 
 IPv4 is the default. Use `-4` to select it explicitly or `-6` to retrieve IPv6
 route objects instead:
 
 ```sh
-swift run asroutes-cli AS701       # IPv4 by default
-swift run asroutes-cli -4 AS701    # Explicit IPv4
-swift run asroutes-cli -6 AS701    # IPv6
+swift run asroutes AS701       # IPv4 by default
+swift run asroutes -4 AS701    # Explicit IPv4
+swift run asroutes -6 AS701    # IPv6
 ```
 
 `-4` and `-6` are mutually exclusive; each invocation retrieves exactly one
@@ -73,7 +70,7 @@ selection is discovered and retained for the session. A different server,
 port, or ordered source list can be selected explicitly:
 
 ```sh
-swift run asroutes-cli --host rr.ntt.net --port 43 --sources RADB,RIPE AS701
+swift run asroutes --host rr.ntt.net --port 43 --sources RADB,RIPE AS701
 ```
 
 `--connect-timeout` and `--query-timeout` accept positive seconds when a
@@ -102,7 +99,7 @@ partial route snapshot on standard output.
 
 ## Library usage
 
-Add the package and `ASRoutes` library product to another Swift package:
+Add the package and `ASRoutesClient` library product to another Swift package:
 
 ```swift
 dependencies: [
@@ -110,21 +107,26 @@ dependencies: [
         url: "https://github.com/RouteObjects/asroutes.git",
         from: "0.1.0"
     ),
+    .package(
+        url: "https://github.com/RouteObjects/swift-cidr.git",
+        .upToNextMinor(from: "0.4.0")
+    ),
 ],
 targets: [
     .target(
         name: "MyTarget",
         dependencies: [
-            .product(name: "ASRoutes", package: "asroutes"),
+            .product(name: "ASRoutesClient", package: "asroutes"),
+            .product(name: "CIDR", package: "swift-cidr"),
         ]
     ),
 ]
 ```
 
-The `ASRoutes` product exposes the client independently of the executable:
+The `ASRoutesClient` product exposes the client independently of the executable:
 
 ```swift
-import ASRoutes
+import ASRoutesClient
 import CIDR
 
 let configuration = IRRdClientConfiguration(
@@ -189,14 +191,14 @@ same ordered sources. The equivalent IPv4 direct-origin lookup is:
 
 ```sh
 bgpq4 -h rr.ntt.net -S RADB,RIPE -4 -F '%n/%l\n' AS701
-swift run asroutes-cli -4 --host rr.ntt.net --sources RADB,RIPE AS701
+swift run asroutes -4 --host rr.ntt.net --sources RADB,RIPE AS701
 ```
 
 For IPv6, use `-6` with both tools:
 
 ```sh
 bgpq4 -h rr.ntt.net -S RADB,RIPE -6 -F '%n/%l\n' AS701
-swift run asroutes-cli -6 --host rr.ntt.net --sources RADB,RIPE AS701
+swift run asroutes -6 --host rr.ntt.net --sources RADB,RIPE AS701
 ```
 
 The two prefix sets can be compared after applying the same deterministic sort.

@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import ASRoutes
+import ASRoutesClient
 import CIDR
 import Testing
 

@@ -25,14 +25,14 @@ func awaitPromptlyCancellableValue<Value: Sendable>(
         try await withCheckedThrowingContinuation { continuation in
             guard handoff.install(continuation) else { return }
 
-            // CHANGE: SwiftNIO's EventLoopFuture.get() may ignore task cancellation. The
+            // SwiftNIO's EventLoopFuture.get() may ignore task cancellation. The
             // producer may therefore outlive its caller, while this explicit handoff decides
             // exactly once whether a value transfers or requires late cleanup.
             let producer = Task {
                 do {
                     let value = try await operation()
                     if handoff.succeed(value) {
-                        // CHANGE: A fresh unstructured task does not inherit the producer's
+                        // A fresh unstructured task does not inherit the producer's
                         // cancelled state, so cancellation-aware cleanup cannot be abandoned.
                         let cleanupTask = Task {
                             await cleanup(value)
@@ -50,7 +50,7 @@ func awaitPromptlyCancellableValue<Value: Sendable>(
     }
 }
 
-// CHANGE: A lock-backed state machine closes the cancellation-registration race without
+// A lock-backed state machine closes the cancellation-registration race without
 // actor hops. Continuations and Task cancellation are both safe to trigger from any thread.
 final class PromptCancellationHandoff<Value: Sendable>: @unchecked Sendable {
     private enum State {

@@ -36,25 +36,25 @@ jobs:
         run: swift package resolve
 
       - name: Debug build
-        run: swift build --product asroutes-cli
+        run: swift build --product asroutes
 
       - name: Test
         run: ./scripts/test.sh
 
       - name: Release build
-        run: swift build -c release --product asroutes-cli
+        run: swift build -c release --product asroutes
 
       - name: Exercise offline CLI entry points
         run: |
-          binary="$(swift build -c release --show-bin-path)/asroutes-cli"
+          binary="$(swift build -c release --show-bin-path)/asroutes"
           test "$("${binary}" --version)" = "0.1.0"
           "${binary}" --help >/dev/null
 
-      - name: Build ASRoutes for the iOS 18 simulator
+      - name: Build ASRoutesClient for the iOS 18 simulator
         run: |
           sdk_path="$(xcrun --sdk iphonesimulator --show-sdk-path)"
           swift build \
-            --target ASRoutes \
+            --target ASRoutesClient \
             --triple arm64-apple-ios18.0-simulator \
             --sdk "${sdk_path}"
 
@@ -99,16 +99,16 @@ jobs:
           Package.swift Sources Tests
 
       - name: Debug build
-        run: swift build --product asroutes-cli
+        run: swift build --product asroutes
 
       - name: Test
         run: ./scripts/test.sh
 
       - name: Release build
-        run: swift build -c release --product asroutes-cli
+        run: swift build -c release --product asroutes
 
       - name: Exercise offline CLI entry points
         run: |
-          binary="$(swift build -c release --show-bin-path)/asroutes-cli"
+          binary="$(swift build -c release --show-bin-path)/asroutes"
           test "$("${binary}" --version)" = "0.1.0"
           "${binary}" --help >/dev/null

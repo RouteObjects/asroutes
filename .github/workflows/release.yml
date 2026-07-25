@@ -109,7 +109,7 @@ jobs:
         run: |
           # CHANGE: Remap compilation roots before stripping so neither Swift nor C-family
           # diagnostics can retain the hosted runner's absolute workspace path.
-          swift build -c release --product asroutes-cli \
+          swift build -c release --product asroutes \
             -Xswiftc -file-prefix-map \
             -Xswiftc "${GITHUB_WORKSPACE}/.build=SwiftPMBuild" \
             -Xswiftc -file-prefix-map \
@@ -121,7 +121,7 @@ jobs:
         env:
           VERSION: ${{ needs.metadata.outputs.version }}
         run: |
-          binary="$(swift build -c release --show-bin-path)/asroutes-cli"
+          binary="$(swift build -c release --show-bin-path)/asroutes"
           # CHANGE: SwiftPM's Darwin release output retains object-file paths in Mach-O debug
           # metadata; strip those sections before auditing and packaging the public binary.
           strip -S -x "${binary}"
@@ -138,7 +138,7 @@ jobs:
           asset="asroutes-${VERSION}-darwin-${ARCH}.tar.gz"
           stage="$(mktemp -d)"
           install -m 0755 \
-            "$(swift build -c release --show-bin-path)/asroutes-cli" \
+            "$(swift build -c release --show-bin-path)/asroutes" \
             "${stage}/asroutes"
           # CHANGE: THIRD_PARTY_NOTICES.txt now carries the complete applicable
           # third-party terms, so release archives need only two legal/attribution files.
@@ -199,7 +199,7 @@ jobs:
                swift --version &&
                # CHANGE: Remap compile-time roots so diagnostics retained in the ELF do not
                # expose the GitHub workspace or SwiftPM scratch directory.
-               swift build -c release --static-swift-stdlib --product asroutes-cli \
+               swift build -c release --static-swift-stdlib --product asroutes \
                  -Xswiftc -debug-prefix-map \
                  -Xswiftc /workspace=Source \
                  -Xcc -ffile-prefix-map=/workspace/.build=SwiftPMBuild'
@@ -209,7 +209,7 @@ jobs:
           VERSION: ${{ needs.metadata.outputs.version }}
         run: |
           set -euo pipefail
-          binary=".build/release/asroutes-cli"
+          binary=".build/release/asroutes"
           strip --strip-unneeded "${binary}"
           test "$("${binary}" --version)" = "${VERSION}"
           "${binary}" --help >/dev/null
@@ -230,7 +230,7 @@ jobs:
           set -euo pipefail
           asset="asroutes-${VERSION}-linux-${ARCH}.tar.gz"
           stage="$(mktemp -d)"
-          install -m 0755 .build/release/asroutes-cli "${stage}/asroutes"
+          install -m 0755 .build/release/asroutes "${stage}/asroutes"
           # CHANGE: THIRD_PARTY_NOTICES.txt now carries the complete applicable
           # third-party terms, so release archives need only two legal/attribution files.
           install -m 0644 LICENSE THIRD_PARTY_NOTICES.txt "${stage}/"

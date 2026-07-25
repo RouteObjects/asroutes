@@ -16,6 +16,8 @@ import ASRoutesCLI
 @main
 enum ASRoutesMain {
     static func main() async {
-        await ASRoutesCLIEntrypoint.main()
+        // Delegate directly to the package-visible command while keeping command logic
+        // in the regular ASRoutesCLI module that Xcode and SwiftPM tests can import.
+        await ASRoutesCommand.main()
     }
 }

@@ -14,7 +14,7 @@
 import NIOCore
 
 /// Enforces a deadline between an outbound command and its complete decoded IRRd response.
-// CHANGE: This handler is mutated only on its channel's event loop. The unchecked
+// This handler is mutated only on its channel's event loop. The unchecked
 // conformance permits the async caller to ask that event loop to arm a deadline.
 final class IRRdResponseDeadlineHandler: ChannelDuplexHandler, @unchecked Sendable {
     typealias InboundIn = IRRdResponse
@@ -67,7 +67,7 @@ final class IRRdResponseDeadlineHandler: ChannelDuplexHandler, @unchecked Sendab
         timeoutTask = nil
         remainingResponses -= 1
 
-        // CHANGE: Only a complete A/C/D frame resets the response clock. Fragmented
+        // Only a complete A/C/D frame resets the response clock. Fragmented
         // bytes cannot keep a query alive indefinitely.
         if remainingResponses > 0 {
             scheduleDeadline()
@@ -79,7 +79,7 @@ final class IRRdResponseDeadlineHandler: ChannelDuplexHandler, @unchecked Sendab
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         eventLoop.preconditionInEventLoop()
 
-        // CHANGE: Start the response clock when the command enters the channel pipeline. Arming
+        // Start the response clock when the command enters the channel pipeline. Arming
         // it in expectResponses() left an async scheduling window in which a short deadline could
         // close the channel before the caller had enqueued the corresponding command.
         if pendingResponses > 0 {

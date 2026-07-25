@@ -54,7 +54,7 @@ enum IRRdSourceList {
         var seen = Set<String>()
 
         for field in fields {
-            // CHANGE: A server-supplied source name is interpolated into the next `!s`
+            // A server-supplied source name is interpolated into the next `!s`
             // command, so accept only IRRd's configured source-name grammar.
             guard let token = normalizeToken(String(field)) else {
                 throw IRRdOriginRouteClientError.protocolViolation(

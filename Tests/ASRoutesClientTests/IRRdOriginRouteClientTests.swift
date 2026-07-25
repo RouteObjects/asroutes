@@ -13,7 +13,7 @@
 
 import Testing
 
-@testable import ASRoutes
+@testable import ASRoutesClient
 
 @Suite("IRRd origin-route payload parsing")
 struct IRRdOriginRouteClientTests {
@@ -69,7 +69,7 @@ struct IRRdOriginRouteClientTests {
             """
         )
 
-        // CHANGE: Both /25s remain even though the /24 covers them; only the exact duplicate is removed.
+        // Both /25s remain even though the /24 covers them; only the exact duplicate is removed.
         #expect(
             prefixes.map(\.description) == [
                 "10.0.0.0/8",
@@ -109,7 +109,7 @@ struct IRRdOriginRouteClientTests {
             """
         )
 
-        // CHANGE: The /48 and covered /49 both remain, while canonicalization makes equivalent
+        // The /48 and covered /49 both remain, while canonicalization makes equivalent
         // /32 values exact duplicates and numeric sorting puts :2 before :10.
         #expect(
             prefixes.map(\.description) == [

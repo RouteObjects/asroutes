@@ -120,10 +120,10 @@ public struct IRRdOriginRouteClient: Sendable {
                     command: "!s"
                 )
 
-                // CHANGE: Both origin-query families use the same FIFO session workflow; only the
+                // Both origin-query families use the same FIFO session workflow; only the
                 // command prefix and typed payload parser vary, preventing protocol behavior drift.
                 try await connection.responseDeadline.expectResponses(uniqueASNs.count)
-                // CHANGE: Submit the pipelined route commands as one writer sequence so the
+                // Submit the pipelined route commands as one writer sequence so the
                 // response deadline cannot advance while the task is suspended between writes.
                 let routeCommands = uniqueASNs.map { asn in
                     ByteBuffer(string: "\(queryPrefix)\(asn.description)\n")
@@ -186,7 +186,7 @@ extension IRRdOriginRouteClient {
                             timeout: configuration.queryTimeout
                         )
 
-                        // CHANGE: Install framing and complete-response deadlines before the
+                        // Install framing and complete-response deadlines before the
                         // async wrapper so no IRRd bytes can bypass protocol enforcement.
                         try channel.pipeline.syncOperations.addHandler(
                             ByteToMessageHandler(
@@ -241,7 +241,7 @@ extension IRRdOriginRouteClient {
             prefixes.insert(prefix)
         }
 
-        // CHANGE: Compare address storage rather than rendered text so IPv4 and IPv6 both have
+        // Compare address storage rather than rendered text so IPv4 and IPv6 both have
         // stable numeric network ordering, with less-specific prefixes first at one boundary.
         return prefixes.sorted { lhs, rhs in
             if lhs.prefix != rhs.prefix {

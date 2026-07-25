@@ -96,14 +96,14 @@ audit_binary() {
 
     audit_temporary_file="$(mktemp)"
     audit_filtered_file="$(mktemp)"
-    # CHANGE: Inspect every data section consistently on Darwin and Linux; the default
+    # Inspect every data section consistently on Darwin and Linux; the default
     # Apple `strings` selection omits Mach-O sections that GNU `strings` examines.
     LC_ALL=C strings -a "${binary}" >"${audit_temporary_file}"
 
     # Static Swift runtime archives contain source locations from the official
     # toolchain build. They are public upstream paths rather than runner paths.
     upstream_toolchain_path="^/""home/build-user/swift(-experimental-string-processing)?/"
-    # CHANGE: Static Foundation contains this literal system lookup path on Linux; it
+    # Static Foundation contains this literal system lookup path on Linux; it
     # is runtime behavior, not a path to the source tree or release runner.
     upstream_runtime_path="^/""private/var/automount/$"
     grep -E -v \
@@ -119,7 +119,7 @@ audit_binary() {
         [[ ${status} -eq 1 ]] || fail "Unable to audit release binary paths."
     fi
 
-    # CHANGE: Apple's `strings` does not inspect every Mach-O section that GNU `strings`
+    # Apple's `strings` does not inspect every Mach-O section that GNU `strings`
     # examines. Scan raw bytes for non-toolchain path families so the build job and the
     # Linux assembly job enforce the same artifact policy.
     # The filtered `strings -a` pass checks Linux home and private-var paths because

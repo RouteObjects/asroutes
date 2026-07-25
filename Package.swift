@@ -22,10 +22,8 @@ let package = Package(
         .macOS(.v15),
     ],
     products: [
-        .library(name: "ASRoutes", targets: ["ASRoutes"]),
-        // CHANGE: Xcode derives a build product module from this name; `asroutes` would
-        // case-collide with the `ASRoutes` library even though the installed CLI is `asroutes`.
-        .executable(name: "asroutes-cli", targets: ["ASRoutesExecutable"]),
+        .library(name: "ASRoutesClient", targets: ["ASRoutesClient"]),
+        .executable(name: "asroutes", targets: ["ASRoutesExecutable"]),
     ],
     dependencies: [
         .package(
@@ -43,19 +41,19 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "ASRoutes",
+            name: "ASRoutesClient",
             dependencies: [
                 .product(name: "CIDR", package: "swift-cidr"),
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
             ]
         ),
-        // CHANGE: Keep command behavior in an importable target so Xcode can build its tests;
+        // Keep command behavior in an importable target so Xcode can build its tests;
         // the separately named executable target below now owns only process startup.
         .target(
             name: "ASRoutesCLI",
             dependencies: [
-                "ASRoutes",
+                "ASRoutesClient",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "CIDR", package: "swift-cidr"),
             ],
@@ -64,14 +62,14 @@ let package = Package(
         .executableTarget(
             name: "ASRoutesExecutable",
             dependencies: ["ASRoutesCLI"],
-            // CHANGE: A target named `asroutes` aliases the `ASRoutes` library's build directory
-            // on case-insensitive filesystems; this distinct target safely emits `asroutes-cli`.
+            // Keep process startup separate so ASRoutesCLI remains an importable,
+            // testable module in both SwiftPM and Xcode.
             path: "Sources/ASRoutesExecutable"
         ),
         .testTarget(
-            name: "ASRoutesTests",
+            name: "ASRoutesClientTests",
             dependencies: [
-                "ASRoutes",
+                "ASRoutesClient",
                 "ASRoutesCLI",
                 .product(name: "CIDR", package: "swift-cidr"),
                 .product(name: "NIOEmbedded", package: "swift-nio"),
@@ -81,7 +79,7 @@ let package = Package(
         .testTarget(
             name: "ASRoutesCLITests",
             dependencies: [
-                "ASRoutes",
+                "ASRoutesClient",
                 "ASRoutesCLI",
                 .product(name: "CIDR", package: "swift-cidr"),
             ],

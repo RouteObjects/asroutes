@@ -15,7 +15,7 @@ import Foundation
 import NIOCore
 
 /// Owns raw bootstrap channels until a connection has been transferred to its caller.
-// CHANGE: Every mutation is protected by `lock`; Channel close operations are documented
+// Every mutation is protected by `lock`; Channel close operations are documented
 // by SwiftNIO as thread-safe and are deliberately performed after releasing the lock.
 final class PendingChannelRegistry: @unchecked Sendable {
     private let lock = NSLock()

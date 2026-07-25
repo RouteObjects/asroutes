@@ -16,7 +16,7 @@ import Foundation
 import NIOEmbedded
 import Testing
 
-@testable import ASRoutes
+@testable import ASRoutesClient
 
 @Suite("prompt cancellation bridge")
 struct PromptCancellationTests {
@@ -24,7 +24,7 @@ struct PromptCancellationTests {
     func successfulValueTransfersExactlyOnce() async throws {
         let recorder = HandoffRecorder()
 
-        // CHANGE: Repetition exercises the producer/consumer scheduling boundary that exposed
+        // Repetition exercises the producer/consumer scheduling boundary that exposed
         // premature channel closure on Linux after a successful connection handoff.
         for value in 0..<256 {
             let result = try await awaitPromptlyCancellableValue {
@@ -85,7 +85,7 @@ struct PromptCancellationTests {
         operation.cancel()
         operation.cancel()
 
-        // CHANGE: The caller must finish while the simulated bootstrap remains suspended.
+        // The caller must finish while the simulated bootstrap remains suspended.
         #expect(await completion.wait(timeout: .milliseconds(250)) == .cancelled)
         #expect(await cancellationHook.wait(timeout: .milliseconds(250)) != nil)
 
@@ -133,7 +133,7 @@ struct PromptCancellationTests {
                 completion.record(.otherError)
             }
         }
-        // CHANGE: The hook deliberately blocks, so cancel from a GCD worker rather than
+        // The hook deliberately blocks, so cancel from a GCD worker rather than
         // consuming a cooperative-executor thread while the ordering is asserted.
         DispatchQueue.global().async {
             operation.cancel()

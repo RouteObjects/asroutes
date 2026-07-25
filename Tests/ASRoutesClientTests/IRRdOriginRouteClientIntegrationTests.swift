@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import ASRoutes
+import ASRoutesClient
 import CIDR
 import Foundation
 import NIOCore
@@ -55,7 +55,7 @@ struct IRRdOriginRouteClientIntegrationTests {
                     "203.0.113.0/24",
                 ])
             #expect(results[1].prefixes.isEmpty)
-            // CHANGE: Keep both the covering route and its more-specific while removing the exact duplicate.
+            // Keep both the covering route and its more-specific while removing the exact duplicate.
             #expect(
                 results[2].prefixes.map(\.description) == [
                     "192.0.2.0/24",
@@ -114,7 +114,7 @@ struct IRRdOriginRouteClientIntegrationTests {
                     "2001:db8:1::/48",
                 ])
             #expect(results[1].prefixes.isEmpty)
-            // CHANGE: Keep the covering IPv6 route and its more-specific while removing the exact duplicate.
+            // Keep the covering IPv6 route and its more-specific while removing the exact duplicate.
             #expect(
                 results[2].prefixes.map(\.description) == [
                     "2001:db8:2::/48",
@@ -226,7 +226,7 @@ struct IRRdOriginRouteClientIntegrationTests {
         let sourcePayload = "DEFAULT,ALT"
         let firstRoutePayload = "10.0.0.0/8"
         let secondRoutePayload = "192.0.2.0/24"
-        // CHANGE: Set the ceiling to exactly the two route payloads; rejection therefore proves
+        // Set the ceiling to exactly the two route payloads; rejection therefore proves
         // that the preceding successful source-discovery payload participates in the same budget.
         let routeOnlyBytes =
             firstRoutePayload.utf8.count + 1
@@ -301,7 +301,7 @@ struct IRRdOriginRouteClientIntegrationTests {
                     host: "127.0.0.1",
                     port: server.port,
                     connectTimeout: .seconds(2),
-                    // CHANGE: Leave enough wall-clock margin for a contended shared runner. The
+                    // Leave enough wall-clock margin for a contended shared runner. The
                     // 1,000-byte, 40 ms drip still needs roughly 40 seconds to complete its frame.
                     queryTimeout: .seconds(2)
                 )
@@ -454,7 +454,7 @@ private struct FakeIRRdServer {
         do {
             let listener = try await ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
-                // CHANGE: TCP_NODELAY must use IPPROTO_TCP; SOL_SOCKET maps its numeric value
+                // TCP_NODELAY must use IPPROTO_TCP; SOL_SOCKET maps its numeric value
                 // to privileged SO_DEBUG on Linux and rejects the accepted channel with EPERM.
                 .childChannelOption(.tcpOption(.tcp_nodelay), value: 1)
                 .childChannelInitializer { channel in
@@ -586,7 +586,7 @@ private final class RecordedOutput: @unchecked Sendable {
     }
 }
 
-// CHANGE: The handler is confined to one NIO event loop; unchecked Sendable documents that confinement.
+// The handler is confined to one NIO event loop; unchecked Sendable documents that confinement.
 private final class FakeIRRdServerHandler: ChannelInboundHandler, @unchecked Sendable {
     typealias InboundIn = ByteBuffer
 
@@ -649,7 +649,7 @@ private final class FakeIRRdServerHandler: ChannelInboundHandler, @unchecked Sen
             write(Self.dataResponse("DEFAULT,ALT"), context: context)
         case let sourceCommand where sourceCommand.hasPrefix("!s"):
             write("C\n", context: context)
-        // CHANGE: Both compact direct-origin commands share framing and FIFO semantics;
+        // Both compact direct-origin commands share framing and FIFO semantics;
         // accepting either family keeps the loopback harness focused on protocol behavior.
         case let routeCommand
         where routeCommand.hasPrefix("!gAS") || routeCommand.hasPrefix("!6AS"):
@@ -669,7 +669,7 @@ private final class FakeIRRdServerHandler: ChannelInboundHandler, @unchecked Sen
         case .explicitSourcesAndThreeRoutes:
             guard receivedRouteCommands.count == 3 else { return }
 
-            // CHANGE: Withhold all route replies until every request arrives, proving the client pipelines them.
+            // Withhold all route replies until every request arrives, proving the client pipelines them.
             let combinedResponses =
                 Self.dataResponse("203.0.113.0/24 10.0.0.0/8")
                 + "D\n"
@@ -678,7 +678,7 @@ private final class FakeIRRdServerHandler: ChannelInboundHandler, @unchecked Sen
         case .explicitSourcesAndThreeIPv6Routes:
             guard receivedRouteCommands.count == 3 else { return }
 
-            // CHANGE: Expanded and uppercase input verifies canonical IPv6 rendering in addition
+            // Expanded and uppercase input verifies canonical IPv6 rendering in addition
             // to pipelining, FIFO association, an empty middle result, and exact deduplication.
             let combinedResponses =
                 Self.dataResponse(
@@ -703,7 +703,7 @@ private final class FakeIRRdServerHandler: ChannelInboundHandler, @unchecked Sen
             break
         case .slowDripRoute:
             guard receivedRouteCommands.count == 1 else { return }
-            // CHANGE: Raw bytes arrive more frequently than the configured timeout,
+            // Raw bytes arrive more frequently than the configured timeout,
             // but never form a complete response before its absolute frame deadline.
             write("A1000\n", context: context)
             dripContext = context

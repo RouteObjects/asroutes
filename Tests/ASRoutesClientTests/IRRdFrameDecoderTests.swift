@@ -15,7 +15,7 @@ import NIOCore
 import NIOEmbedded
 import Testing
 
-@testable import ASRoutes
+@testable import ASRoutesClient
 
 @Suite("IRRd frame decoder")
 struct IRRdFrameDecoderTests {
@@ -266,7 +266,7 @@ extension IRRdFrameDecoderTests {
     }
 
     fileprivate static func successFrame(_ payload: String) -> [UInt8] {
-        // CHANGE: The final payload LF is part of IRRd's advertised byte count.
+        // The final payload LF is part of IRRd's advertised byte count.
         let announcedByteCount = payload.utf8.count + 1
         return Array("A\(announcedByteCount)\n".utf8) + Array(payload.utf8) + Array("\nC\n".utf8)
     }
