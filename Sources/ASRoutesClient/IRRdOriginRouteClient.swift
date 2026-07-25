@@ -42,8 +42,7 @@ public struct IRRdOriginRouteClient: Sendable {
         try await originRoutes(
             for: asns,
             queryPrefix: "!gAS",
-            parsePrefixes: { try Self.parseIPv4Prefixes($0) },
-            makeResult: { ASOriginIPv4Routes(asn: $0, prefixes: $1) }
+            parsePrefixes: { try Self.parseIPv4Prefixes($0) }
         )
     }
 
@@ -61,17 +60,17 @@ public struct IRRdOriginRouteClient: Sendable {
         try await originRoutes(
             for: asns,
             queryPrefix: "!6AS",
-            parsePrefixes: { try Self.parseIPv6Prefixes($0) },
-            makeResult: { ASOriginIPv6Routes(asn: $0, prefixes: $1) }
+            parsePrefixes: { try Self.parseIPv6Prefixes($0) }
         )
     }
 
-    private func originRoutes<Prefix: Sendable, Result: Sendable>(
+    // CHANGE: Bind the shared session workflow to swift-cidr's address-family model so the
+    // result and parsed networks cannot drift to different families.
+    private func originRoutes<Family: IPAddressFamily>(
         for asns: [AutonomousSystemNumber],
         queryPrefix: String,
-        parsePrefixes: @escaping @Sendable (String) throws -> [Prefix],
-        makeResult: @escaping @Sendable (AutonomousSystemNumber, [Prefix]) -> Result
-    ) async throws -> [Result] {
+        parsePrefixes: @escaping @Sendable (String) throws -> [IPNetwork<Family>]
+    ) async throws -> [ASOriginIPRoutes<Family>] {
         let validated = try ValidatedConfiguration(configuration)
         let uniqueASNs = Self.uniqued(asns)
         guard !uniqueASNs.isEmpty else { return [] }
@@ -130,12 +129,12 @@ public struct IRRdOriginRouteClient: Sendable {
                 }
                 try await outbound.write(contentsOf: routeCommands)
 
-                var results: [Result] = []
+                var results: [ASOriginIPRoutes<Family>] = []
                 results.reserveCapacity(uniqueASNs.count)
 
                 for asn in uniqueASNs {
                     let response = try await Self.nextResponse(from: &responses)
-                    let prefixes: [Prefix]
+                    let prefixes: [IPNetwork<Family>]
 
                     switch response {
                     case .success(let payload, _):
@@ -144,7 +143,7 @@ public struct IRRdOriginRouteClient: Sendable {
                         prefixes = []
                     }
 
-                    results.append(makeResult(asn, prefixes))
+                    results.append(ASOriginIPRoutes(asn: asn, prefixes: prefixes))
                 }
 
                 try await outbound.write(ByteBuffer(string: "!q\n"))

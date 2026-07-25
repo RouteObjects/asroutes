@@ -123,6 +123,10 @@ targets: [
 ]
 ```
 
+Applications that use the result model also use `swift-cidr` types directly,
+so declare the `swift-cidr` package and its `CIDR` product explicitly as shown
+instead of relying on a transitive dependency.
+
 The `ASRoutesClient` product exposes the client independently of the executable:
 
 ```swift
@@ -153,11 +157,40 @@ let ipv6Results = try await client.ipv6Routes(for: [
 ])
 ```
 
-`ipv4Routes(for:)` returns `[ASOriginIPv4Routes]`, whose prefixes are
-`IPv4Network` values. `ipv6Routes(for:)` returns `[ASOriginIPv6Routes]`, whose
-prefixes are `IPv6Network` values. Both APIs preserve first-seen ASN order,
-remove exact duplicate prefixes, retain covered more-specifics, and sort the
-remaining prefixes deterministically.
+The shared result model is `ASOriginIPRoutes<Family>`. It contains an
+`AutonomousSystemNumber` and family-bound `[IPNetwork<Family>]` prefixes. The
+ordinary family-specific names remain available as public aliases:
+
+- `ASOriginIPv4Routes` is `ASOriginIPRoutes<V4>` and contains `IPv4Network`
+  prefixes.
+- `ASOriginIPv6Routes` is `ASOriginIPRoutes<V6>` and contains `IPv6Network`
+  prefixes.
+
+The IRRd client currently produces only these `V4` and `V6` specializations.
+The aliases also provide their family context when constructing an empty result,
+so `ASOriginIPv4Routes(asn: asn, prefixes: [])` needs no explicit generic argument.
+
+Accordingly, `ipv4Routes(for:)` continues to return
+`[ASOriginIPv4Routes]`, and `ipv6Routes(for:)` continues to return
+`[ASOriginIPv6Routes]`. Both APIs preserve first-seen ASN order, remove exact
+duplicate prefixes, retain covered more-specifics, and sort the remaining
+prefixes deterministically.
+
+The generic model also supports algorithms shared by both address families
+without erasing their type information:
+
+```swift
+func isCovered<Family: IPAddressFamily>(
+    _ address: IPAddress<Family>,
+    by routes: ASOriginIPRoutes<Family>
+) -> Bool {
+    routes.prefixes.contains { $0.contains(address) }
+}
+```
+
+The shared `Family` parameter requires the address and routes to use the same
+IP family at compile time. An IPv4 address cannot be passed with IPv6 routes,
+or vice versa.
 
 `AutonomousSystemNumber` is the numeric identity used by the client, result
 models, collections, and command-line parser. The command locally removes an

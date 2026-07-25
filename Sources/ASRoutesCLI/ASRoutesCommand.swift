@@ -263,30 +263,21 @@ enum CLIConfigurationBuilder {
 }
 
 enum GroupedRouteRenderer {
-    static func render(_ routes: [ASOriginIPv4Routes]) -> String {
-        renderGroups(routes, asn: \.asn, prefixes: \.prefixes)
-    }
-
-    static func render(_ routes: [ASOriginIPv6Routes]) -> String {
-        renderGroups(routes, asn: \.asn, prefixes: \.prefixes)
-    }
-
-    // Both address families intentionally share identical grouped text formatting.
-    private static func renderGroups<Route, Prefix>(
-        _ routes: [Route],
-        asn: (Route) -> AutonomousSystemNumber,
-        prefixes: (Route) -> [Prefix]
-    ) -> String where Prefix: CustomStringConvertible {
+    // CHANGE: Render the family-bound result directly so IPv4 and IPv6 cannot develop separate
+    // formatting behavior while retaining their compile-time prefix types.
+    static func render<Family: IPAddressFamily>(
+        _ routes: [ASOriginIPRoutes<Family>]
+    ) -> String {
         routes.map { routesForASN in
             let body: String
-            let routePrefixes = prefixes(routesForASN)
+            let routePrefixes = routesForASN.prefixes
             if routePrefixes.isEmpty {
                 body = "(no prefixes)"
             } else {
                 body = routePrefixes.map(\.description).joined(separator: "\n")
             }
 
-            return "AS\(asn(routesForASN).description):\n\(body)"
+            return "AS\(routesForASN.asn.description):\n\(body)"
         }.joined(separator: "\n\n")
     }
 }

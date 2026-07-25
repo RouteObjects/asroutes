@@ -36,7 +36,7 @@ struct IRRdOriginRouteClientIntegrationTests {
             )
             let client = IRRdOriginRouteClient(configuration: configuration)
 
-            let results = try await client.ipv4Routes(for: [
+            let results: [ASOriginIPv4Routes] = try await client.ipv4Routes(for: [
                 AutonomousSystemNumber(701),
                 AutonomousSystemNumber(64_500),
                 AutonomousSystemNumber(64_496),
@@ -95,7 +95,7 @@ struct IRRdOriginRouteClientIntegrationTests {
             )
             let client = IRRdOriginRouteClient(configuration: configuration)
 
-            let results = try await client.ipv6Routes(for: [
+            let results: [ASOriginIPv6Routes] = try await client.ipv6Routes(for: [
                 AutonomousSystemNumber(701),
                 AutonomousSystemNumber(64_500),
                 AutonomousSystemNumber(64_496),
