@@ -17,6 +17,8 @@ concurrency:
 jobs:
   macos:
     name: macOS
+    # CHANGE: Keep the higher-cost macOS and iOS checks available for deliberate validation only.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: macos-15
     timeout-minutes: 20
 
@@ -32,17 +34,6 @@ jobs:
 
       - name: Resolve dependencies
         run: swift package resolve
-
-      - name: Audit tracked release content
-        run: ./scripts/audit-release-content.sh tree
-
-      - name: Strict format lint
-        run: >-
-          swift format lint
-          --configuration .swift-format.json
-          --recursive
-          --strict
-          Package.swift Sources Tests
 
       - name: Debug build
         run: swift build --product asroutes-cli
@@ -92,6 +83,20 @@ jobs:
 
       - name: Resolve dependencies
         run: swift package resolve
+
+      # CHANGE: Preserve automatic release-content and formatting gates on the lower-cost x86_64 job.
+      - name: Audit tracked release content
+        if: matrix.arch == 'x86_64'
+        run: ./scripts/audit-release-content.sh tree
+
+      - name: Strict format lint
+        if: matrix.arch == 'x86_64'
+        run: >-
+          swift format lint
+          --configuration .swift-format.json
+          --recursive
+          --strict
+          Package.swift Sources Tests
 
       - name: Debug build
         run: swift build --product asroutes-cli

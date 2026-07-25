@@ -140,10 +140,11 @@ jobs:
           install -m 0755 \
             "$(swift build -c release --show-bin-path)/asroutes-cli" \
             "${stage}/asroutes"
+          # CHANGE: THIRD_PARTY_NOTICES.txt now carries the complete applicable
+          # third-party terms, so release archives need only two legal/attribution files.
           install -m 0644 LICENSE THIRD_PARTY_NOTICES.txt "${stage}/"
-          cp -R ThirdPartyLicenses "${stage}/ThirdPartyLicenses"
           COPYFILE_DISABLE=1 tar -C "${stage}" -czf "${asset}" \
-            asroutes LICENSE THIRD_PARTY_NOTICES.txt ThirdPartyLicenses
+            asroutes LICENSE THIRD_PARTY_NOTICES.txt
 
       - name: Upload release archive
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -230,10 +231,11 @@ jobs:
           asset="asroutes-${VERSION}-linux-${ARCH}.tar.gz"
           stage="$(mktemp -d)"
           install -m 0755 .build/release/asroutes-cli "${stage}/asroutes"
+          # CHANGE: THIRD_PARTY_NOTICES.txt now carries the complete applicable
+          # third-party terms, so release archives need only two legal/attribution files.
           install -m 0644 LICENSE THIRD_PARTY_NOTICES.txt "${stage}/"
-          cp -R ThirdPartyLicenses "${stage}/ThirdPartyLicenses"
           tar -C "${stage}" -czf "${asset}" \
-            asroutes LICENSE THIRD_PARTY_NOTICES.txt ThirdPartyLicenses
+            asroutes LICENSE THIRD_PARTY_NOTICES.txt
 
       - name: Exercise archive without a Swift installation
         env:
@@ -300,9 +302,8 @@ jobs:
             grep -qx 'asroutes' archive-contents.txt
             grep -qx 'LICENSE' archive-contents.txt
             grep -qx 'THIRD_PARTY_NOTICES.txt' archive-contents.txt
-            grep -q '^ThirdPartyLicenses/[^/].*' archive-contents.txt
             if grep -Ev \
-                '^(asroutes|LICENSE|THIRD_PARTY_NOTICES\.txt|ThirdPartyLicenses(/.*)?)$' \
+                '^(asroutes|LICENSE|THIRD_PARTY_NOTICES\.txt)$' \
                 archive-contents.txt; then
               printf 'Unexpected file in %s.\n' "${asset}" >&2
               exit 1

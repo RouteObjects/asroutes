@@ -22,7 +22,6 @@ cd "${PACKAGE_ROOT}"
 for required in \
     LICENSE \
     THIRD_PARTY_NOTICES.txt \
-    ThirdPartyLicenses \
     .swift-format.json \
     .github/workflows/ci.yml \
     .github/workflows/release.yml; do
