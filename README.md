@@ -77,10 +77,36 @@ swift run asroutes --host rr.ntt.net --port 43 --sources RADB,RIPE AS701
 deployment needs values other than the 10-second connection and 30-second
 response defaults.
 
-Each ASN is printed as a separate group. Exact duplicate prefixes are removed
-and the remaining prefixes are sorted deterministically. Covered
-more-specifics are intentionally retained; this command does not aggregate or
-summarize the server's answer.
+### Output formats
+
+By default, `asroutes` writes only prefixes, one per line, with no ASN headers
+or blank separators. The flat stream removes exact duplicates across all
+requested ASNs and sorts the result numerically by network bits and then prefix
+length. Covered more-specifics remain present. `--raw` selects that format
+explicitly:
+
+```sh
+asroutes --raw AS701 AS3356
+```
+
+The default output is therefore directly composable with tools that accept
+CIDR prefixes on standard input:
+
+```sh
+asroutes AS701 AS3356 | cidrmerge
+asroutes AS701 AS3356 | cidrmerge --representation cidr
+```
+
+The first pipeline produces `cidrmerge`'s default minimal address-range
+representation. The second requests a minimal CIDR-prefix representation
+instead. In both cases, `asroutes` supplies the same unadorned prefix stream. If
+no requested ASN has a visible prefix, raw output is empty.
+
+Use `--grouped` or `-g` when human-readable ASN attribution is useful:
+
+```sh
+asroutes --grouped AS701 AS64500
+```
 
 ```text
 AS701:
@@ -90,6 +116,43 @@ AS701:
 AS64500:
 (no prefixes)
 ```
+
+Use `--json` or `-j` for structured output that preserves the association
+between each ASN and its prefixes:
+
+```json
+[
+  {
+    "asn" : 701,
+    "prefixes" : [
+      "10.0.0.0/8",
+      "203.0.113.0/24"
+    ]
+  },
+  {
+    "asn" : 64500,
+    "prefixes" : []
+  }
+]
+```
+
+The top-level value is an array in first-seen ASN order. Each `asn` is an
+unsigned decimal number, and each `prefixes` value is an array of canonical
+CIDR strings in deterministic order. An ASN with no visible prefixes remains in
+the result with an empty array.
+
+Prefixes can be extracted from JSON for another command with `jq`:
+
+```sh
+asroutes --json AS701 AS3356 | jq -r '.[].prefixes[]' | cidrmerge
+```
+
+`--raw`, `--grouped`, and `--json` are mutually exclusive output selections.
+Grouped and JSON output preserve first-seen ASN order and keep prefixes
+associated with their ASN, including a prefix appearing under more than one
+ASN; raw output intentionally discards that attribution. In every format,
+`asroutes` retains covered more-specifics and does not aggregate or summarize
+the server's answer.
 
 Duplicate ASN operands are queried once and retain their first-seen position.
 An invalid operand, connection failure, timeout, malformed response, or invalid
@@ -220,7 +283,8 @@ as fixed test expectations.
 ## Comparing with bgpq4
 
 For a useful comparison, point both tools at the same IRRd host and select the
-same ordered sources. The equivalent IPv4 direct-origin lookup is:
+same ordered sources. Because `asroutes` uses raw output by default, the
+equivalent IPv4 direct-origin lookup is:
 
 ```sh
 bgpq4 -h rr.ntt.net -S RADB,RIPE -4 -F '%n/%l\n' AS701
@@ -242,8 +306,8 @@ mutable.
 
 This proof of concept supports direct-ASN IPv4 and IPv6 origin lookups, one
 address family per invocation. Mixed-family output, AS-set expansion, prefix
-aggregation, JSON output, caching, policy generation, and RouteObjects UI
-integration remain outside its scope.
+aggregation, caching, policy generation, and RouteObjects UI integration remain
+outside its scope.
 
 ## License
 

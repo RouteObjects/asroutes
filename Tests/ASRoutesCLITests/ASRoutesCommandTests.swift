@@ -13,6 +13,7 @@
 
 import ASRoutesClient
 import CIDR
+import Foundation
 import Testing
 
 @testable import ASRoutesCLI
@@ -43,6 +44,51 @@ struct ASRoutesCommandTests {
         #expect(command.queryTimeout == 7)
         #expect(command.asnOperands == ["AS701", "702"])
         #expect(command.addressFamily == .ipv4)
+        #expect(command.outputFormat == .raw)
+    }
+
+    @Test("output flags select raw, grouped, or JSON")
+    func parsesOutputFormatFlags() throws {
+        #expect(try ASRoutesCommand.parse(["AS701"]).outputFormat == .raw)
+        #expect(try ASRoutesCommand.parse(["--raw", "AS701"]).outputFormat == .raw)
+        #expect(try ASRoutesCommand.parse(["--grouped", "AS701"]).outputFormat == .grouped)
+        #expect(try ASRoutesCommand.parse(["-g", "AS701"]).outputFormat == .grouped)
+        #expect(try ASRoutesCommand.parse(["--json", "AS701"]).outputFormat == .json)
+        #expect(try ASRoutesCommand.parse(["-j", "AS701"]).outputFormat == .json)
+    }
+
+    @Test("output flags are mutually exclusive")
+    func rejectsConflictingOutputFlags() {
+        for arguments in [
+            ["--raw", "--grouped", "AS701"],
+            ["--raw", "--json", "AS701"],
+            ["--grouped", "--json", "AS701"],
+        ] {
+            #expect(throws: (any Error).self) {
+                try ASRoutesCommand.parse(arguments)
+            }
+        }
+    }
+
+    @Test("output selection is independent of address-family selection")
+    func combinesOutputAndAddressFamilyFlags() throws {
+        let rawIPv4 = try ASRoutesCommand.parse(["-4", "--raw", "AS701"])
+        let groupedIPv6 = try ASRoutesCommand.parse(["-6", "-g", "AS701"])
+        let jsonIPv4 = try ASRoutesCommand.parse(["-4", "-j", "AS701"])
+
+        #expect(rawIPv4.addressFamily == .ipv4)
+        #expect(rawIPv4.outputFormat == .raw)
+        #expect(groupedIPv6.addressFamily == .ipv6)
+        #expect(groupedIPv6.outputFormat == .grouped)
+        #expect(jsonIPv4.addressFamily == .ipv4)
+        #expect(jsonIPv4.outputFormat == .json)
+    }
+
+    @Test("the unsupported -r shorthand is rejected")
+    func rejectsRawShortAlias() {
+        #expect(throws: (any Error).self) {
+            try ASRoutesCommand.parse(["-r", "AS701"])
+        }
     }
 
     @Test("address-family flags select IPv4 or IPv6")
@@ -182,56 +228,6 @@ struct ASRoutesCommandTests {
         }
     }
 
-    @Test("grouped output preserves result order and inserts one blank line")
-    func rendersGroupedOutput() {
-        let routes = [
-            ASOriginIPv4Routes(
-                asn: AutonomousSystemNumber(701),
-                prefixes: [
-                    .init("1.2.3.0/24")!,
-                    .init("4.5.0.0/16")!,
-                ]
-            ),
-            ASOriginIPv4Routes(asn: AutonomousSystemNumber(702), prefixes: []),
-        ]
-
-        #expect(
-            GroupedRouteRenderer.render(routes) == """
-                AS701:
-                1.2.3.0/24
-                4.5.0.0/16
-
-                AS702:
-                (no prefixes)
-                """
-        )
-    }
-
-    @Test("IPv6 grouped output uses the existing text contract")
-    func rendersIPv6GroupedOutput() {
-        let routes = [
-            ASOriginIPv6Routes(
-                asn: AutonomousSystemNumber(701),
-                prefixes: [
-                    .init("2001:db8::/32")!,
-                    .init("2001:db8:1::/48")!,
-                ]
-            ),
-            ASOriginIPv6Routes(asn: AutonomousSystemNumber(702), prefixes: []),
-        ]
-
-        #expect(
-            GroupedRouteRenderer.render(routes) == """
-                AS701:
-                2001:db8::/32
-                2001:db8:1::/48
-
-                AS702:
-                (no prefixes)
-                """
-        )
-    }
-
     @Test("application dispatches to the selected typed lookup")
     func dispatchesSelectedAddressFamily() async throws {
         let calls = LookupCallRecorder()
@@ -253,7 +249,8 @@ struct ASRoutesCommandTests {
         try await application.run(
             configuration: configuration,
             asns: asns,
-            addressFamily: .ipv6
+            addressFamily: .ipv6,
+            outputFormat: .json
         )
 
         let snapshot = await calls.snapshot()
@@ -261,10 +258,63 @@ struct ASRoutesCommandTests {
         #expect(snapshot.ipv6 == [asns])
     }
 
-    @Test("no results render as an empty buffer")
-    func rendersNoResults() {
-        #expect(GroupedRouteRenderer.render([ASOriginIPv4Routes]()) == "")
-        #expect(GroupedRouteRenderer.render([ASOriginIPv6Routes]()) == "")
+    @Test("application performs one exact write for empty raw success")
+    func writesEmptyRawOutputOnce() async throws {
+        let output = DataOutputRecorder()
+        let application = ASRoutesApplication(
+            routeLookup: { _, _ in [] },
+            outputWriter: { output.record($0) }
+        )
+
+        try await application.run(
+            configuration: IRRdClientConfiguration(host: "rr.example.net"),
+            asns: [AutonomousSystemNumber(701)]
+        )
+
+        #expect(output.snapshot() == [Data()])
+    }
+
+    @Test("default and explicit raw application output are byte-for-byte identical")
+    func defaultAndExplicitRawOutputMatch() async throws {
+        let output = DataOutputRecorder()
+        let routes = [
+            ASOriginIPv4Routes(
+                asn: AutonomousSystemNumber(701),
+                prefixes: [.init("192.0.2.0/24")!]
+            )
+        ]
+        let application = ASRoutesApplication(
+            routeLookup: { _, _ in routes },
+            outputWriter: { output.record($0) }
+        )
+        let configuration = IRRdClientConfiguration(host: "rr.example.net")
+        let asns = [AutonomousSystemNumber(701)]
+
+        try await application.run(configuration: configuration, asns: asns)
+        try await application.run(
+            configuration: configuration,
+            asns: asns,
+            addressFamily: .ipv4,
+            outputFormat: .raw
+        )
+
+        let writes = output.snapshot()
+        #expect(writes == [Data("192.0.2.0/24\n".utf8), Data("192.0.2.0/24\n".utf8)])
+    }
+
+    @Test("application propagates output writer failures")
+    func propagatesOutputWriterFailure() async {
+        let application = ASRoutesApplication(
+            routeLookup: { _, _ in [] },
+            outputWriter: { _ in throw SyntheticOutputError.failed }
+        )
+
+        await #expect(throws: SyntheticOutputError.failed) {
+            try await application.run(
+                configuration: IRRdClientConfiguration(host: "rr.example.net"),
+                asns: [AutonomousSystemNumber(701)]
+            )
+        }
     }
 }
 
@@ -293,5 +343,24 @@ private actor LookupCallRecorder {
         ipv6: [[AutonomousSystemNumber]]
     ) {
         (ipv4Calls, ipv6Calls)
+    }
+}
+
+private enum SyntheticOutputError: Error {
+    case failed
+}
+
+private final class DataOutputRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var outputs: [Data] = []
+
+    func record(_ output: Data) {
+        lock.withLock {
+            outputs.append(output)
+        }
+    }
+
+    func snapshot() -> [Data] {
+        lock.withLock { outputs }
     }
 }

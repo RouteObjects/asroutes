@@ -247,7 +247,7 @@ struct IRRdOriginRouteClientIntegrationTests {
                         for: asns
                     )
                 },
-                outputWriter: { output.write($0) }
+                outputWriter: { try output.write($0) }
             )
 
             do {
@@ -398,7 +398,7 @@ struct IRRdOriginRouteClientIntegrationTests {
                     )
                 },
                 outputWriter: { renderedOutput in
-                    output.write(renderedOutput)
+                    try output.write(renderedOutput)
                 }
             )
 
@@ -573,9 +573,13 @@ private final class RecordedOutput: @unchecked Sendable {
     private let lock = NSLock()
     private var storage: [String] = []
 
-    func write(_ output: String) {
+    func write(_ output: Data) throws {
+        guard let decodedOutput = String(data: output, encoding: .utf8) else {
+            throw RecordedOutputError.invalidUTF8
+        }
+
         lock.lock()
-        storage.append(output)
+        storage.append(decodedOutput)
         lock.unlock()
     }
 
@@ -584,6 +588,10 @@ private final class RecordedOutput: @unchecked Sendable {
         defer { lock.unlock() }
         return storage
     }
+}
+
+private enum RecordedOutputError: Error {
+    case invalidUTF8
 }
 
 // The handler is confined to one NIO event loop; unchecked Sendable documents that confinement.

@@ -34,6 +34,11 @@ package struct ASRoutesCommand: AsyncParsableCommand {
     @Flag
     var addressFamily: RouteFamilyOption = .ipv4
 
+    // CHANGE: Raw output is the explicit default so stdout composes with other UNIX tools
+    // without depending on terminal detection or requiring an additional flag.
+    @Flag
+    var outputFormat: RouteOutputFormat = .raw
+
     @Option(name: .long, help: "IRRd host to query.")
     var host = "rr.ntt.net"
 
@@ -70,7 +75,8 @@ package struct ASRoutesCommand: AsyncParsableCommand {
         try await ASRoutesApplication.live.run(
             configuration: clientConfiguration,
             asns: asns,
-            addressFamily: addressFamily
+            addressFamily: addressFamily,
+            outputFormat: outputFormat
         )
     }
 }
@@ -98,6 +104,30 @@ enum RouteFamilyOption: Sendable, EnumerableFlag {
     }
 }
 
+extension RouteOutputFormat: EnumerableFlag {
+    static func name(for value: Self) -> NameSpecification {
+        switch value {
+        case .raw:
+            return .long
+        case .grouped:
+            return [.customShort("g"), .long]
+        case .json:
+            return [.customShort("j"), .long]
+        }
+    }
+
+    static func help(for value: Self) -> ArgumentHelp? {
+        switch value {
+        case .raw:
+            return "Print one globally deduplicated prefix per line (default)."
+        case .grouped:
+            return "Group prefixes under their origin AS numbers."
+        case .json:
+            return "Print structured JSON preserving origin-AS attribution."
+        }
+    }
+}
+
 struct ASRoutesApplication: Sendable {
     typealias IPv4RouteLookup =
         @Sendable (
@@ -110,7 +140,7 @@ struct ASRoutesApplication: Sendable {
             _ asns: [AutonomousSystemNumber]
         ) async throws -> [ASOriginIPv6Routes]
     typealias RouteLookup = IPv4RouteLookup
-    typealias OutputWriter = @Sendable (_ output: String) -> Void
+    typealias OutputWriter = @Sendable (_ output: Data) throws -> Void
 
     static let live = ASRoutesApplication(
         routeLookup: { configuration, asns in
@@ -119,7 +149,11 @@ struct ASRoutesApplication: Sendable {
         ipv6RouteLookup: { configuration, asns in
             try await IRRdOriginRouteClient(configuration: configuration).ipv6Routes(for: asns)
         },
-        outputWriter: { print($0) }
+        // CHANGE: Write the exact rendered bytes once so empty raw results remain truly empty and
+        // output failures are surfaced instead of being hidden by print's text-oriented behavior.
+        outputWriter: { output in
+            try FileHandle.standardOutput.write(contentsOf: output)
+        }
     )
 
     let ipv4RouteLookup: IPv4RouteLookup
@@ -142,31 +176,39 @@ struct ASRoutesApplication: Sendable {
         configuration: IRRdClientConfiguration,
         asns: [AutonomousSystemNumber]
     ) async throws {
-        try await run(configuration: configuration, asns: asns, addressFamily: .ipv4)
+        try await run(
+            configuration: configuration,
+            asns: asns,
+            addressFamily: .ipv4,
+            outputFormat: .raw
+        )
     }
 
     func run(
         configuration: IRRdClientConfiguration,
         asns: [AutonomousSystemNumber],
-        addressFamily: RouteFamilyOption
+        addressFamily: RouteFamilyOption,
+        outputFormat: RouteOutputFormat = .raw
     ) async throws {
-        let renderedOutput: String
+        let renderedOutput: Data
         // Keep IPv4 and IPv6 lookups strongly typed while sharing the CLI's atomic
         // dispatch and output boundary.
         switch addressFamily {
         case .ipv4:
-            renderedOutput = GroupedRouteRenderer.render(
-                try await ipv4RouteLookup(configuration, asns)
+            renderedOutput = try RouteOutputRenderer.render(
+                try await ipv4RouteLookup(configuration, asns),
+                format: outputFormat
             )
         case .ipv6:
-            renderedOutput = GroupedRouteRenderer.render(
-                try await ipv6RouteLookup(configuration, asns)
+            renderedOutput = try RouteOutputRenderer.render(
+                try await ipv6RouteLookup(configuration, asns),
+                format: outputFormat
             )
         }
 
         // The output sink is invoked only after every query and prefix parse succeeds,
         // making an all-AS snapshot atomic even when a later response fails.
-        outputWriter(renderedOutput)
+        try outputWriter(renderedOutput)
     }
 }
 
@@ -259,25 +301,5 @@ enum CLIConfigurationBuilder {
         }
 
         return sources
-    }
-}
-
-enum GroupedRouteRenderer {
-    // CHANGE: Render the family-bound result directly so IPv4 and IPv6 cannot develop separate
-    // formatting behavior while retaining their compile-time prefix types.
-    static func render<Family: IPAddressFamily>(
-        _ routes: [ASOriginIPRoutes<Family>]
-    ) -> String {
-        routes.map { routesForASN in
-            let body: String
-            let routePrefixes = routesForASN.prefixes
-            if routePrefixes.isEmpty {
-                body = "(no prefixes)"
-            } else {
-                body = routePrefixes.map(\.description).joined(separator: "\n")
-            }
-
-            return "AS\(routesForASN.asn.description):\n\(body)"
-        }.joined(separator: "\n\n")
     }
 }
