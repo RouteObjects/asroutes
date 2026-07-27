@@ -309,6 +309,22 @@ address family per invocation. Mixed-family output, AS-set expansion, prefix
 aggregation, caching, policy generation, and RouteObjects UI integration remain
 outside its scope.
 
+## RouteObjects ecosystem
+
+`asroutes` is part of the [RouteObjects](https://github.com/RouteObjects)
+**Swift for Network Infrastructure** toolkit:
+
+- [swift-cidr](https://github.com/RouteObjects/swift-cidr) — Strongly typed IP
+  address, network, and CIDR primitives for Swift.
+- [asroutes](https://github.com/RouteObjects/asroutes) — SwiftNIO IRRd client and
+  CLI for direct-ASN IPv4 and IPv6 origin-route lookups.
+- [cidrmerge](https://github.com/RouteObjects/cidrmerge) — Deterministic
+  prefix-set consolidation into minimal address-range or CIDR representations.
+- [swift-cidr-admission](https://github.com/RouteObjects/swift-cidr-admission) —
+  CIDR-based admission policies for Swift services.
+- [cidrwalk](https://github.com/RouteObjects/cidrwalk) — Address-range and CIDR
+  traversal and inspection utility.
+
 ## License
 
 `asroutes` is available under the Apache License 2.0. See [LICENSE](LICENSE).
