@@ -78,6 +78,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
+      # CHANGE: Container steps do not inherit Checkout's host-level safe-directory setting.
+      - name: Trust checked-out workspace
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
       - name: Swift version
         run: swift --version
 
