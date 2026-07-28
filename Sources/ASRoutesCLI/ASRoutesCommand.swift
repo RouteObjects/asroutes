@@ -97,7 +97,7 @@ enum RouteFamilyOption: Sendable, EnumerableFlag {
     static func help(for value: Self) -> ArgumentHelp? {
         switch value {
         case .ipv4:
-            return "Retrieve IPv4 route-object prefixes (default)."
+            return "Retrieve IPv4 route-object prefixes."
         case .ipv6:
             return "Retrieve IPv6 route-object prefixes."
         }
@@ -119,7 +119,7 @@ extension RouteOutputFormat: EnumerableFlag {
     static func help(for value: Self) -> ArgumentHelp? {
         switch value {
         case .raw:
-            return "Print one globally deduplicated prefix per line (default)."
+            return "Print one globally deduplicated prefix per line."
         case .grouped:
             return "Group prefixes under their origin AS numbers."
         case .json:

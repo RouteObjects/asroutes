@@ -168,7 +168,7 @@ Add the package and `ASRoutesClient` library product to another Swift package:
 dependencies: [
     .package(
         url: "https://github.com/RouteObjects/asroutes.git",
-        from: "0.1.0"
+        .upToNextMinor(from: "0.1.0")
     ),
     .package(
         url: "https://github.com/RouteObjects/swift-cidr.git",
