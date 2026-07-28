@@ -10,7 +10,8 @@ snapshot of routes currently visible in the global BGP table.
 
 ## Requirements
 
-- Swift 6.1 or newer
+- Swift 6.1 or newer when building from source or using the `ASRoutesClient`
+  library through SwiftPM
 - macOS 15 or newer, or Ubuntu 22.04 or newer, to run the command-line
   executable
 - iOS 18 or newer when using the `ASRoutesClient` library in an application
@@ -19,6 +20,18 @@ snapshot of routes currently visible in the global BGP table.
 The initial release is verified with `swift-cidr` 0.4.0, SwiftNIO 2.100.0, and
 Swift Argument Parser 1.7.0. `Package.resolved` records the exact dependency
 revisions used for release verification.
+
+## Install with Homebrew
+
+Install a prebuilt command-line executable from the RouteObjects tap:
+
+```sh
+brew install RouteObjects/tap/asroutes
+asroutes --version
+```
+
+Homebrew selects the appropriate macOS or Linux archive for the host platform.
+No Swift toolchain is required to install or run the prebuilt executable.
 
 ## Build from source
 
