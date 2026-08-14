@@ -1,4 +1,10 @@
-# asroutes
+<h1 align="left">
+  <img src="Documentation/Assets/asroutes-icon.png" alt="asroutes icon" width="75" height="75" valign="middle">
+  &nbsp;asroutes
+</h1>
+
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FRouteObjects%2Fasroutes%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/RouteObjects/asroutes)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FRouteObjects%2Fasroutes%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/RouteObjects/asroutes)
 
 `asroutes` is a Swift command-line client and reusable library for looking up
 the IPv4 or IPv6 IRR route objects whose `origin` attribute names a particular
