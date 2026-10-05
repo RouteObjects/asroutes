@@ -16,16 +16,16 @@ snapshot of routes currently visible in the global BGP table.
 
 ## Requirements
 
-- Swift 6.1 or newer when building from source or using the `ASRoutesClient`
+- Swift 6.2 or newer when building from source or using the `ASRoutesClient`
   library through SwiftPM
 - macOS 15 or newer, or Ubuntu 22.04 or newer, to run the command-line
   executable
 - iOS 18 or newer when using the `ASRoutesClient` library in an application
 - TCP access to an IRRd raw-Whois service (normally port 43)
 
-The initial release is verified with `swift-cidr` 0.4.0, SwiftNIO 2.100.0, and
-Swift Argument Parser 1.7.0. `Package.resolved` records the exact dependency
-revisions used for release verification.
+The published 0.1.0 release was verified with `swift-cidr` 0.4.0, SwiftNIO
+2.100.0, and Swift Argument Parser 1.7.0. Current source uses `swift-cidr`
+0.7.1; `Package.resolved` records its exact dependency revisions.
 
 ## Install with Homebrew
 
@@ -181,7 +181,8 @@ partial route snapshot on standard output.
 
 ## Library usage
 
-Add the package and `ASRoutesClient` library product to another Swift package:
+To use the published 0.1.0 release, add the package and `ASRoutesClient`
+library product to another Swift package:
 
 ```swift
 dependencies: [
