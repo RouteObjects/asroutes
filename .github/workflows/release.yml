@@ -85,6 +85,8 @@ jobs:
     needs: metadata
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
     strategy:
       fail-fast: false
       matrix:
@@ -181,11 +183,11 @@ jobs:
           EXPECTED_ARCH: ${{ matrix.uname_arch }}
         run: test "$(uname -m)" = "${EXPECTED_ARCH}"
 
-      - name: Build with Swift 6.1 on Ubuntu 22.04
+      - name: Build with Swift 6.2.4 on Ubuntu 22.04
         env:
           DOCKER_PLATFORM: ${{ matrix.docker_platform }}
         run: |
-          # swift:6.1-jammy multi-architecture manifest, resolved 2026-07-24.
+          # swift:6.2.4-jammy multi-architecture manifest, resolved 2026-10-04.
           docker run --rm \
             --platform "${DOCKER_PLATFORM}" \
             --user "$(id -u):$(id -g)" \
@@ -193,7 +195,7 @@ jobs:
             --env CLANG_MODULE_CACHE_PATH=/workspace/.build/clang-module-cache \
             --volume "${PWD}:/workspace" \
             --workdir /workspace \
-            swift:6.1-jammy@sha256:12be34a341945adb64914405ed7b568fcb2d35edbd63a3755007e47dce59456e \
+            swift:6.2.4-jammy@sha256:af5d222ef7e25779bfc52b078c1e92b2e0c4e1ab29d24ace4533e25f8c3ec8c8 \
             bash -c \
               'mkdir -p "${XDG_CACHE_HOME}" "${CLANG_MODULE_CACHE_PATH}" &&
                swift --version &&

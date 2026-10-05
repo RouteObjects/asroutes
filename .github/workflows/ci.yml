@@ -21,6 +21,8 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: macos-15
     timeout-minutes: 20
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
 
     steps:
       - name: Checkout
@@ -61,9 +63,9 @@ jobs:
   linux:
     name: Linux ${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
-    # swift:6.1-jammy multi-architecture manifest, resolved 2026-07-24.
+    # swift:6.2.4-jammy multi-architecture manifest, resolved 2026-10-04.
     container: >-
-      swift:6.1-jammy@sha256:12be34a341945adb64914405ed7b568fcb2d35edbd63a3755007e47dce59456e
+      swift:6.2.4-jammy@sha256:af5d222ef7e25779bfc52b078c1e92b2e0c4e1ab29d24ace4533e25f8c3ec8c8
     timeout-minutes: 20
     strategy:
       fail-fast: false
