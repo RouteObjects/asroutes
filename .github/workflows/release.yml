@@ -149,7 +149,7 @@ jobs:
             asroutes LICENSE THIRD_PARTY_NOTICES.txt
 
       - name: Upload release archive
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-darwin-${{ matrix.arch }}
           path: asroutes-${{ needs.metadata.outputs.version }}-darwin-${{ matrix.arch }}.tar.gz
@@ -261,7 +261,7 @@ jobs:
             /opt/asroutes/asroutes --help >/dev/null
 
       - name: Upload release archive
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-linux-${{ matrix.arch }}
           path: asroutes-${{ needs.metadata.outputs.version }}-linux-${{ matrix.arch }}.tar.gz
@@ -324,7 +324,7 @@ jobs:
           )
 
       - name: Upload assembled release
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: asroutes-${{ needs.metadata.outputs.version }}-release
           path: |
