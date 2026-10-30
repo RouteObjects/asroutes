@@ -28,7 +28,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/RouteObjects/swift-cidr.git",
-            .upToNextMinor(from: "0.7.1")
+            .upToNextMinor(from: "0.8.0")
         ),
         .package(
             url: "https://github.com/apple/swift-nio.git",
