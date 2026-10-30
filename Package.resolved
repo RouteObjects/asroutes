@@ -1,5 +1,5 @@
 {
-  "originHash" : "842b72c5cf86ec8b33c48b4198c71e76bac4426df12141df9bd6ab57e4dca758",
+  "originHash" : "62691cc19eb354e1e1648701ddc51ff1206ea1849446e7b1809146e2ea4dcc16",
   "pins" : [
     {
       "identity" : "swift-argument-parser",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/RouteObjects/swift-cidr.git",
       "state" : {
-        "revision" : "3085c1c5be3a38d2e6c274186df02e495b24f844",
-        "version" : "0.7.1"
+        "revision" : "cdc2e592beb9095875bc42fc4c269396b20d99e3",
+        "version" : "0.8.0"
       }
     },
     {
