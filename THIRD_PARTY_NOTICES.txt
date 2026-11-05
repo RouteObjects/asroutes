@@ -27,8 +27,8 @@ Swift Collections 1.6.0
   Source: https://github.com/apple/swift-collections
   License: Apache License 2.0 with Runtime Library Exception
 
-SwiftNIO 2.103.0
-  Revision: 21de5f08c1a166a6dd293d0e587ad977bf8dac5d
+SwiftNIO 2.104.0
+  Revision: 6db9d9abd92ad7399b8a564cafbb87d3507245fa
   Source: https://github.com/apple/swift-nio
   License: Apache License 2.0
 
@@ -61,7 +61,7 @@ Swift license information: https://www.swift.org/legal/license.html
 SwiftNIO NOTICE
 ---------------
 
-The following is the complete NOTICE distributed with SwiftNIO 2.103.0.
+The following is the complete NOTICE distributed with SwiftNIO 2.104.0.
 Its reference to a `license` directory describes the complete SwiftNIO
 distribution. The asroutes binary links SwiftNIO's NIOCore and NIOPosix target
 closure: applicable Apache License 2.0 terms are in the accompanying LICENSE,
