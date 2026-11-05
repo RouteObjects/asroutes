@@ -88,6 +88,17 @@ struct IRRdOriginRouteClientTests {
         }
     }
 
+    // CHANGE: Lock the IRRd payload boundary to swift-cidr 0.8's unsigned, unpadded prefix grammar.
+    @Test(
+        "IPv4 prefix lengths reject padded and signed spellings",
+        arguments: ["192.0.2.0/024", "192.0.2.0/+24", "0.0.0.0/-0"]
+    )
+    func rejectsNoncanonicalIPv4PrefixLengths(_ token: String) {
+        #expect(throws: IRRdOriginRouteClientError.invalidPrefix(token)) {
+            try IRRdOriginRouteClient.parseIPv4Prefixes("198.51.100.0/24 \(token)")
+        }
+    }
+
     @Test("IPv6 prefixes are rejected by the IPv4-only client")
     func rejectsIPv6Payload() {
         #expect(throws: IRRdOriginRouteClientError.invalidPrefix("2001:db8::/32")) {
@@ -126,6 +137,16 @@ struct IRRdOriginRouteClientTests {
             try IRRdOriginRouteClient.parseIPv6Prefixes(
                 "2001:db8::/32 not-an-ipv6-prefix 2001:db8:1::/48"
             )
+        }
+    }
+
+    @Test(
+        "IPv6 prefix lengths reject padded and signed spellings",
+        arguments: ["2001:db8::/032", "2001:db8::/+32", "::/-0"]
+    )
+    func rejectsNoncanonicalIPv6PrefixLengths(_ token: String) {
+        #expect(throws: IRRdOriginRouteClientError.invalidPrefix(token)) {
+            try IRRdOriginRouteClient.parseIPv6Prefixes("2001:db8:1::/48 \(token)")
         }
     }
 
