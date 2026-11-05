@@ -49,7 +49,7 @@ jobs:
       - name: Exercise offline CLI entry points
         run: |
           binary="$(swift build -c release --show-bin-path)/asroutes"
-          test "$("${binary}" --version)" = "0.1.0"
+          test "$("${binary}" --version)" = "0.2.0"
           "${binary}" --help >/dev/null
 
       - name: Build ASRoutesClient for the iOS 18 simulator
@@ -116,5 +116,5 @@ jobs:
       - name: Exercise offline CLI entry points
         run: |
           binary="$(swift build -c release --show-bin-path)/asroutes"
-          test "$("${binary}" --version)" = "0.1.0"
+          test "$("${binary}" --version)" = "0.2.0"
           "${binary}" --help >/dev/null

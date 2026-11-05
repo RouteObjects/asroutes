@@ -1,7 +1,7 @@
 asroutes Third-Party Notices
 ============================
 
-This file records the third-party software used by asroutes 0.1.0. Package
+This file records the third-party software used by asroutes 0.2.0. Package
 versions and revisions are taken from the checked-in Package.resolved.
 
 Resolved Swift packages

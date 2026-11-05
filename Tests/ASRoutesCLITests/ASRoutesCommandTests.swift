@@ -22,7 +22,7 @@ import Testing
 struct ASRoutesCommandTests {
     @Test("the CLI reports the release version")
     func reportsReleaseVersion() {
-        #expect(ASRoutesCommand.version == "0.1.0")
+        #expect(ASRoutesCommand.version == "0.2.0")
         #expect(ASRoutesCommand.configuration.version == ASRoutesCommand.version)
     }
 
