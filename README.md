@@ -25,7 +25,7 @@ snapshot of routes currently visible in the global BGP table.
 
 The published 0.1.0 release was verified with `swift-cidr` 0.4.0, SwiftNIO
 2.100.0, and Swift Argument Parser 1.7.0. Current source uses `swift-cidr`
-0.7.1; `Package.resolved` records its exact dependency revisions.
+0.8.1; `Package.resolved` records its exact dependency revisions.
 
 ## Install with Homebrew
 
@@ -274,6 +274,11 @@ func isCovered<Family: IPAddressFamily>(
 The shared `Family` parameter requires the address and routes to use the same
 IP family at compile time. An IPv4 address cannot be passed with IPv6 routes,
 or vice versa.
+
+The example above remains compatible with the published 0.1.0 release. With
+current source and `swift-cidr` 0.8.1, the unlabeled `contains(_:)` preserves
+address-bit coverage but is deprecated. Use `contains(address: address)` when
+the supplied address's prefix context must also fit inside the route.
 
 `AutonomousSystemNumber` is the numeric identity used by the client, result
 models, collections, and command-line parser. The command locally removes an

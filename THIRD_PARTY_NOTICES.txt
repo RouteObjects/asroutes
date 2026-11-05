@@ -17,8 +17,8 @@ Swift Atomics 1.3.1
   Source: https://github.com/apple/swift-atomics
   License: Apache License 2.0 with Runtime Library Exception
 
-swift-cidr 0.7.1
-  Revision: 3085c1c5be3a38d2e6c274186df02e495b24f844
+swift-cidr 0.8.1
+  Revision: f8d8077191342e58e4f593531d3e7cfb7625988e
   Source: https://github.com/RouteObjects/swift-cidr
   License: Apache License 2.0
 
@@ -27,8 +27,8 @@ Swift Collections 1.6.0
   Source: https://github.com/apple/swift-collections
   License: Apache License 2.0 with Runtime Library Exception
 
-SwiftNIO 2.100.0
-  Revision: 57c0a08a331aaea9f5d7a932ad94ef43be942a95
+SwiftNIO 2.103.0
+  Revision: 21de5f08c1a166a6dd293d0e587ad977bf8dac5d
   Source: https://github.com/apple/swift-nio
   License: Apache License 2.0
 
@@ -61,7 +61,7 @@ Swift license information: https://www.swift.org/legal/license.html
 SwiftNIO NOTICE
 ---------------
 
-The following is the complete NOTICE distributed with SwiftNIO 2.100.0.
+The following is the complete NOTICE distributed with SwiftNIO 2.103.0.
 Its reference to a `license` directory describes the complete SwiftNIO
 distribution. The asroutes binary links SwiftNIO's NIOCore and NIOPosix target
 closure: applicable Apache License 2.0 terms are in the accompanying LICENSE,
