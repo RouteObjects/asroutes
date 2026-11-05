@@ -19,7 +19,7 @@ import Foundation
 // Package access lets the thin executable invoke Argument Parser directly while this
 // command remains in the regular ASRoutesCLI module used by tests.
 package struct ASRoutesCommand: AsyncParsableCommand {
-    static let version = "0.1.0"
+    static let version = "0.2.0"
 
     package static let configuration = CommandConfiguration(
         commandName: "asroutes",

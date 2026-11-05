@@ -23,9 +23,10 @@ snapshot of routes currently visible in the global BGP table.
 - iOS 18 or newer when using the `ASRoutesClient` library in an application
 - TCP access to an IRRd raw-Whois service (normally port 43)
 
-The published 0.1.0 release was verified with `swift-cidr` 0.4.0, SwiftNIO
-2.100.0, and Swift Argument Parser 1.7.0. Current source uses `swift-cidr`
-0.8.1; `Package.resolved` records its exact dependency revisions.
+asroutes 0.2.0 uses `swift-cidr` 0.8.1, SwiftNIO 2.104.0, and
+Swift Argument Parser 1.7.0. `Package.resolved` records the exact dependency
+revisions. See the [0.2.0 release notes](Documentation/ReleaseNotes/0.2.0.md)
+for the Swift toolchain and dependency changes since 0.1.0.
 
 ## Install with Homebrew
 
@@ -181,18 +182,18 @@ partial route snapshot on standard output.
 
 ## Library usage
 
-To use the published 0.1.0 release, add the package and `ASRoutesClient`
-library product to another Swift package:
+For asroutes 0.2.0, add the package and `ASRoutesClient` library product to
+another Swift package:
 
 ```swift
 dependencies: [
     .package(
         url: "https://github.com/RouteObjects/asroutes.git",
-        .upToNextMinor(from: "0.1.0")
+        .upToNextMinor(from: "0.2.0")
     ),
     .package(
         url: "https://github.com/RouteObjects/swift-cidr.git",
-        .upToNextMinor(from: "0.4.0")
+        .upToNextMinor(from: "0.8.1")
     ),
 ],
 targets: [
@@ -267,7 +268,7 @@ func isCovered<Family: IPAddressFamily>(
     _ address: IPAddress<Family>,
     by routes: ASOriginIPRoutes<Family>
 ) -> Bool {
-    routes.prefixes.contains { $0.contains(address) }
+    routes.prefixes.contains { $0.contains(address: address) }
 }
 ```
 
@@ -275,10 +276,10 @@ The shared `Family` parameter requires the address and routes to use the same
 IP family at compile time. An IPv4 address cannot be passed with IPv6 routes,
 or vice versa.
 
-The example above remains compatible with the published 0.1.0 release. With
-current source and `swift-cidr` 0.8.1, the unlabeled `contains(_:)` preserves
-address-bit coverage but is deprecated. Use `contains(address: address)` when
-the supplied address's prefix context must also fit inside the route.
+The labeled `contains(address:)` operation also requires the address's prefix
+context to fit inside the route. Bare addresses use their host prefix (`/32`
+or `/128`); an address carrying a broader prefix is not contained by a more
+specific route. The deprecated unlabeled overload checks address bits only.
 
 `AutonomousSystemNumber` is the numeric identity used by the client, result
 models, collections, and command-line parser. The command locally removes an
